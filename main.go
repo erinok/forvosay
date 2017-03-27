@@ -12,7 +12,7 @@ import (
 var word = flag.String("word", "", "say this `word` or phrase")
 var lang = flag.String("lang", "", "2-letter language `code`")
 var refreshCache = flag.Bool("refresh", false, "download results even if already in cache")
-var numDL = flag.Int("num", 3, "(`max`) number of pronunciations to download and play")
+var numDL = flag.Int("n", 3, "(`max`) number of pronunciations to download and play")
 
 func main() {
 	flag.Usage = func() {
