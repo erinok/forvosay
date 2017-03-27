@@ -18,9 +18,10 @@ var fallback = flag.String("fallback", "", "if no pronuncations are found, fallb
 
 func main() {
 	flag.Usage = func() {
-		fmt.Fprint(os.Stderr, os.Args[0], `
+		fmt.Fprint(os.Stderr, os.Args[0], ` -lang LANG -word WORD
 
-download and play pronunciations from Forvo.com.
+Download and play pronunciations for WORD in language LANG from Forvo.com.
+
 Results are cached in ~/.forvocache.
 
 dependencies:
