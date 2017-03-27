@@ -9,7 +9,7 @@ import (
 	"path"
 )
 
-var cacheDir = os.Getenv("HOME") + "/.forvo"
+var cacheDir = os.Getenv("HOME") + "/.forvocache"
 
 func (req Req) CacheDir() string {
 	return cacheDir + "/" + req.LangCode + "/" + hexsha1(req.Word)
@@ -23,7 +23,23 @@ func (req Req) CacheMP3Fname(mp3url string) string {
 	return req.CacheDir() + "/" + hexsha1(mp3url) + ".mp3"
 }
 
-func Cached(req Req) (*Resp, error) {
+func CacheResp(req Req) (*Resp, error) {
+	if !*refreshCache {
+		if resp, err := getCachedResp(req); err == nil {
+			return resp, nil
+		}
+	}
+	resp, err := Get(req)
+	if err != nil {
+		return nil, err
+	}
+	if err := saveRespToCache(req, *resp); err != nil {
+		fmt.Println("warning: could not save pronunciation list to cache:", err)
+	}
+	return resp, nil
+}
+
+func getCachedResp(req Req) (*Resp, error) {
 	f, err := os.Open(req.CacheFname())
 	if err != nil {
 		return nil, err
@@ -40,7 +56,7 @@ func Cached(req Req) (*Resp, error) {
 	return &resp, nil
 }
 
-func SaveToCache(req Req, resp Resp) error {
+func saveRespToCache(req Req, resp Resp) error {
 	buf, err := json.Marshal(&resp)
 	if err != nil {
 		return err
@@ -51,22 +67,6 @@ func SaveToCache(req Req, resp Resp) error {
 		return err
 	}
 	return ioutil.WriteFile(fname, buf, 0666)
-}
-
-func CachingGet(req Req) (*Resp, error) {
-	if !*refreshCache {
-		if resp, err := Cached(req); err == nil {
-			return resp, nil
-		}
-	}
-	resp, err := Get(req)
-	if err != nil {
-		return nil, err
-	}
-	if err := SaveToCache(req, *resp); err != nil {
-		fmt.Println("warning: could not save pronunciations to cache:", err)
-	}
-	return resp, nil
 }
 
 func hexsha1(s string) string {

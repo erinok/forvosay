@@ -34,7 +34,7 @@ type Resp struct {
 
 type Req struct {
 	Word     string
-	LangCode string // e.g. de
+	LangCode string // e.g. "de"
 }
 
 func Get(req Req) (*Resp, error) {
@@ -46,6 +46,7 @@ func Get(req Req) (*Resp, error) {
 		"/language/", req.LangCode,
 		"/order/rate-desc",
 	)
+	fmt.Println("downloading pronunciation list...")
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err

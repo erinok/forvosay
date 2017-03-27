@@ -1,4 +1,4 @@
-// Command forvocl players pronuncations from the Forvo website using mplayer.
+// Command forvosay downloads and plays pronunciations from Forvo.com (using mplayer).
 //
 // Results are cached in ~/.forvocache.
 package main
@@ -9,17 +9,24 @@ import (
 	"os"
 )
 
-var word = flag.String("word", "", "lookup and say this `word`")
+var word = flag.String("word", "", "say this `word` or phrase")
 var lang = flag.String("lang", "", "2-letter language `code`")
-var refreshCache = flag.Bool("refresh", false, "redownload results even if already in cache")
+var refreshCache = flag.Bool("refresh", false, "download results even if already in cache")
 var numDL = flag.Int("num", 3, "(`max`) number of pronunciations to download and play")
 
 func main() {
 	flag.Usage = func() {
-		fmt.Fprint(os.Stderr, os.Args[0], `download and play word pronunciations from Forvo.com
-		
-FORVO_API_KEY must be set in your environment
+		fmt.Fprint(os.Stderr, os.Args[0], `
 
+download and play pronunciations from Forvo.com.
+Results are cached in ~/.forvocache.
+
+dependencies:
+
+- FORVO_API_KEY must be set in your environment
+- mplayer must be in your PATH
+
+options:
 `)
 		flag.PrintDefaults()
 	}
@@ -37,23 +44,33 @@ FORVO_API_KEY must be set in your environment
 		fatal("-num must be >= 1")
 	}
 	req := Req{*word, *lang}
-	resp, err := CachingGet(req)
+	resp, err := CacheResp(req)
 	if err != nil {
 		fatal("could not download results:", err)
 	}
-	fmt.Println(*resp)
 	if len(resp.Items) > *numDL {
+		fmt.Println("playing first", *numDL, "of", len(resp.Items), "pronunciation(s)...")
 		resp.Items = resp.Items[:*numDL]
+	} else {
+		fmt.Println("playing", len(resp.Items), "pronunciation(s)...")
 	}
-	errs := CacheMP3s(req, *resp)
-	for _, err := range errs {
-		fmt.Fprintln(os.Stderr, "error downloading mp3:", err)
-	}
-	if len(errs) == len(resp.Items) {
-		fatal("could not download any pronunciations: ", errs)
-	}
-	if err := PlayMP3s(req, *resp); err != nil {
-		fatal("error playing mp3: %v", err)
+	errs := false
+	i := 0
+	CacheMP3s(req, *resp, func(mp3 MaybeMP3) {
+		i += 1
+		if mp3.Err != nil {
+			fmt.Fprintln(os.Stderr, "could not download mp3:", mp3.Err)
+			errs = true
+			return
+		}
+		fmt.Println(i)
+		err := PlayMP3(mp3.Fname)
+		if err != nil {
+			fatal("could not play mp3:", err)
+		}
+	})
+	if errs {
+		os.Exit(1)
 	}
 }
 
