@@ -9,4 +9,6 @@ To install:
 
 	# set FORVO_API_KEY in your environment
 
-	
+Then try it out:
+
+	forvosay -lang fr -word "je t'aime"
