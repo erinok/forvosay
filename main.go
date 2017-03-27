@@ -48,6 +48,10 @@ options:
 	if err != nil {
 		fatal("could not download results:", err)
 	}
+	if len(resp.Items) == 0 {
+		fmt.Println("no results for «", *word, "»")
+		os.Exit(0)
+	}
 	if len(resp.Items) > *numDL {
 		fmt.Println("playing first", *numDL, "of", len(resp.Items), "pronunciation(s)...")
 		resp.Items = resp.Items[:*numDL]
