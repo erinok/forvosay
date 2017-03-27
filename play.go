@@ -5,6 +5,5 @@ import (
 )
 
 func PlayMP3(fname string) error {
-	cmd := exec.Command("mplayer", fname)
-	return cmd.Run()
+	return exec.Command("mplayer", fname).Run()
 }

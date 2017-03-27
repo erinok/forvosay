@@ -7,12 +7,14 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 )
 
 var word = flag.String("word", "", "say this `word` or phrase")
 var lang = flag.String("lang", "", "2-letter language `code`")
 var refreshCache = flag.Bool("refresh", false, "download results even if already in cache")
 var numDL = flag.Int("n", 3, "(`max`) number of pronunciations to download and play")
+var fallback = flag.String("fallback", "", "if no pronuncations are found, fallback to using the 'say' command with this `voice`")
 
 func main() {
 	flag.Usage = func() {
@@ -50,31 +52,36 @@ options:
 	}
 	if len(resp.Items) == 0 {
 		fmt.Println("no results for «", *word, "»")
-		os.Exit(0)
-	}
-	if len(resp.Items) > *numDL {
-		fmt.Println("playing first", *numDL, "of", len(resp.Items), "pronunciation(s)...")
-		resp.Items = resp.Items[:*numDL]
+		if *fallback != "" {
+			fmt.Println("falling back to say -v", *fallback)
+			if err := exec.Command("say", "-v", *fallback, *word).Run(); err != nil {
+				fatal("could not execute say fallback:", err)
+			}
+		}
 	} else {
-		fmt.Println("playing", len(resp.Items), "pronunciation(s)...")
-	}
-	errs := false
-	i := 0
-	CacheMP3s(req, *resp, func(mp3 MaybeMP3) {
-		i += 1
-		if mp3.Err != nil {
-			fmt.Fprintln(os.Stderr, "could not download mp3:", mp3.Err)
-			errs = true
-			return
+		fmt.Println("found", len(resp.Items), "pronunciation(s)")
+		if len(resp.Items) > *numDL {
+			fmt.Println("playing the first", *numDL)
+			resp.Items = resp.Items[:*numDL]
 		}
-		fmt.Println(i)
-		err := PlayMP3(mp3.Fname)
-		if err != nil {
-			fatal("could not play mp3:", err)
+		errs := false
+		i := 0
+		CacheMP3s(req, *resp, func(mp3 MaybeMP3) {
+			i += 1
+			if mp3.Err != nil {
+				fmt.Fprintln(os.Stderr, "could not download mp3:", mp3.Err)
+				errs = true
+				return
+			}
+			fmt.Println("playing", i, "/", len(resp.Items))
+			err := PlayMP3(mp3.Fname)
+			if err != nil {
+				fatal("could not play mp3:", err)
+			}
+		})
+		if errs {
+			os.Exit(1)
 		}
-	})
-	if errs {
-		os.Exit(1)
 	}
 }
 
