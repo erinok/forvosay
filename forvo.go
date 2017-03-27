@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 )
 
@@ -27,7 +28,7 @@ type Pronunciation struct {
 	NumPositiveVotes int `json:"num_positive_votes"`
 }
 
-type Pronunciations struct {
+type Resp struct {
 	Items []Pronunciation
 }
 
@@ -36,12 +37,12 @@ type Req struct {
 	LangCode string // e.g. de
 }
 
-func GetPronunciations(req Req) (*Pronunciations, error) {
+func Get(req Req) (*Resp, error) {
 	url := fmt.Sprint(
 		"https://apifree.forvo.com/key/", apiKey,
 		"/format/json",
 		"/action/word-pronunciations",
-		"/word/", req.Word,
+		"/word/", url.PathEscape(req.Word),
 		"/language/", req.LangCode,
 		"/order/rate-desc",
 	)
@@ -49,6 +50,7 @@ func GetPronunciations(req Req) (*Pronunciations, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, fmt.Errorf("bad forvo HTPP status: %s", resp.Status)
 	}
@@ -56,7 +58,7 @@ func GetPronunciations(req Req) (*Pronunciations, error) {
 	if err != nil {
 		return nil, err
 	}
-	var pr Pronunciations
+	var pr Resp
 	if err := json.Unmarshal(buf, &pr); err != nil {
 		return nil, fmt.Errorf("forvo response could not be unmarshalled as json: %v", err)
 	}
