@@ -52,17 +52,17 @@ options:
 		fatal("could not download results:", err)
 	}
 	if len(resp.Items) == 0 {
-		fmt.Println("no results for «", *word, "»")
 		if *fallback != "" {
-			fmt.Println("falling back to say -v", *fallback)
+			fmt.Println("no results; using 'say'")
 			if err := exec.Command("say", "-v", *fallback, *word).Run(); err != nil {
-				fatal("could not execute say fallback:", err)
+				fatal("could not 'say':", err)
 			}
+		} else {
+			fmt.Println("no results")
 		}
 	} else {
-		fmt.Println("found", len(resp.Items), "pronunciation(s)")
-		if len(resp.Items) > *numDL {
-			fmt.Println("playing the first", *numDL)
+		tot := len(resp.Items)
+		if tot > *numDL {
 			resp.Items = resp.Items[:*numDL]
 		}
 		errs := false
@@ -74,7 +74,7 @@ options:
 				errs = true
 				return
 			}
-			fmt.Println("playing", i, "/", len(resp.Items))
+			fmt.Println("playing", i, "/", len(resp.Items), fmt.Sprint("(of ", tot, ")"))
 			err := PlayMP3(mp3.Fname)
 			if err != nil {
 				fatal("could not play mp3:", err)
