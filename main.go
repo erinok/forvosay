@@ -15,6 +15,8 @@ var lang = flag.String("lang", "", "2-letter language `code`")
 var refreshCache = flag.Bool("refresh", false, "download results even if already in cache")
 var numDL = flag.Int("n", 3, "(`max`) number of pronunciations to download and play")
 var fallback = flag.String("fallback", "", "if no pronuncations are found, fallback to using the 'say' command with this `voice`")
+var nossl = flag.Bool("nossl", false, "don't use ssl when communicating with forvo.com; about twice as fast, but exposes your api key in plaintext")
+var bench = flag.Bool("bench", false, "time the request to forvo.com")
 
 func main() {
 	flag.Usage = func() {

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"time"
 )
 
 var apiKey = os.Getenv("FORVO_API_KEY")
@@ -38,8 +39,19 @@ type Req struct {
 }
 
 func Get(req Req) (*Resp, error) {
+	if *bench {
+		t0 := time.Now()
+		defer func() {
+			fmt.Println(time.Since(t0))
+		}()
+	}
+	addr := "https://apifree.forvo.com"
+	if *nossl {
+		addr = "http://apifree.forvo.com"
+	}
 	url := fmt.Sprint(
-		"https://apifree.forvo.com/key/", apiKey,
+		addr,
+		"/key/", apiKey,
 		"/format/json",
 		"/action/word-pronunciations",
 		"/word/", url.PathEscape(req.Word),
