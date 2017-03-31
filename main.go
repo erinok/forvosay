@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 )
 
 var word = flag.String("word", "", "say this `word` or phrase")
@@ -48,6 +49,7 @@ options:
 	if *numDL < 1 {
 		fatal("-num must be >= 1")
 	}
+	*word = strings.ToLower(*word) // pretty sure forvo doesn't distinguish by case, so go ahead and normalize and get more use out of the cache
 	req := Req{*word, *lang}
 	resp, err := CacheResp(req)
 	if err != nil {
