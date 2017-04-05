@@ -8,9 +8,8 @@ import (
 )
 
 type MaybeMP3 struct {
-	Fname     string
-	Err       error
-	WasCached bool
+	Fname string
+	Err   error
 }
 
 func CacheMP3s(req Req, resp Resp, cb func(MaybeMP3)) {
@@ -27,30 +26,30 @@ func cachedMP3(url, fname string, result chan MaybeMP3) {
 	if !*refreshCache {
 		if _, err := os.Stat(fname); err == nil {
 			// cached we are done
-			result <- MaybeMP3{fname, nil, true}
+			result <- MaybeMP3{fname, nil}
 			return
 		}
 	}
 	// not cached, download it
 	r, err := http.Get(url)
 	if err != nil {
-		result <- MaybeMP3{"", err, false}
+		result <- MaybeMP3{"", err}
 		return
 	}
 	defer r.Body.Close()
 	if r.StatusCode < 200 || r.StatusCode >= 300 {
-		result <- MaybeMP3{"", fmt.Errorf("bad download status for MP3 file: %v", r.Status), false}
+		result <- MaybeMP3{"", fmt.Errorf("bad download status for MP3 file: %v", r.Status)}
 		return
 	}
 	buf, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		result <- MaybeMP3{"", fmt.Errorf("error while downloading MP3: %v", err), false}
+		result <- MaybeMP3{"", fmt.Errorf("error while downloading MP3: %v", err)}
 		return
 	}
 	if err := ioutil.WriteFile(fname, buf, 0666); err != nil {
-		result <- MaybeMP3{"", fmt.Errorf("error saving MP3: %v", err), false}
+		result <- MaybeMP3{"", fmt.Errorf("error saving MP3: %v", err)}
 		return
 	}
 	// we're good
-	result <- MaybeMP3{fname, nil, false}
+	result <- MaybeMP3{fname, nil}
 }
