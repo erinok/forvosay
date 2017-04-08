@@ -45,6 +45,9 @@ func Get(req Req) (*Resp, error) {
 			fmt.Println(time.Since(t0))
 		}()
 	}
+	if req.Word == "0" {
+		req.Word = " 0" // workaround apparent forvo bug
+	}
 	addr := "https://apifree.forvo.com"
 	if *nossl {
 		addr = "http://apifree.forvo.com"
@@ -73,7 +76,7 @@ func Get(req Req) (*Resp, error) {
 	}
 	var pr Resp
 	if err := json.Unmarshal(buf, &pr); err != nil {
-		return nil, fmt.Errorf("forvo response could not be unmarshalled as json: %v", err)
+		return nil, fmt.Errorf("forvo response «%s» could not be unmarshalled as json: %v", err, string(buf))
 	}
 	return &pr, nil
 }
