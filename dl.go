@@ -14,8 +14,8 @@ type MaybeMP3 struct {
 
 func CacheMP3s(req Req, resp Resp, cb func(MaybeMP3)) {
 	ch := make(chan MaybeMP3, len(resp.Items))
-	for _, item := range resp.Items {
-		go cachedMP3(item.PathMP3, req.CacheMP3Fname(item.PathMP3), ch)
+	for i, item := range resp.Items {
+		go cachedMP3(item.PathMP3, req.CacheMP3Fname(i), ch)
 	}
 	for range resp.Items {
 		cb(<-ch)

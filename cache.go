@@ -1,26 +1,26 @@
 package main
 
 import (
-	"crypto/sha1"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
+	"strings"
 )
 
 var cacheDir = os.Getenv("HOME") + "/.forvocache"
 
 func (req Req) CacheDir() string {
-	return cacheDir + "/" + req.LangCode + "/" + hexsha1(req.Word)
+	return cacheDir + "/" + req.LangCode + "/" + sanitizeFname(req.Word)
 }
 
 func (req Req) CacheFname() string {
-	return req.CacheDir() + "/resp.json"
+	return req.CacheDir() + "/.resp.json"
 }
 
-func (req Req) CacheMP3Fname(mp3url string) string {
-	return req.CacheDir() + "/" + hexsha1(mp3url) + ".mp3"
+func (req Req) CacheMP3Fname(index int) string {
+	return fmt.Sprintf("%s/%s-%02d.mp3", req.CacheDir(), sanitizeFname(req.Word), index+1)
 }
 
 func CacheResp(req Req) (*Resp, error) {
@@ -69,6 +69,9 @@ func saveRespToCache(req Req, resp Resp) error {
 	return ioutil.WriteFile(fname, buf, 0666)
 }
 
-func hexsha1(s string) string {
-	return fmt.Sprintf("%0x", sha1.Sum([]byte(s)))
+func sanitizeFname(s string) string {
+	// this works for mac, probably need to be fancier for other OSes...
+	s = strings.Replace(s, "/", "47", -1)
+	s = strings.Replace(s, ":", "48", -1)
+	return s
 }

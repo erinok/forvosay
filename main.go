@@ -8,13 +8,15 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
 var word = flag.String("word", "", "say this `word` or phrase")
 var lang = flag.String("lang", "", "2-letter language `code`")
 var refreshCache = flag.Bool("refresh", false, "download results even if already in cache")
-var numDL = flag.Int("n", 3, "(`max`) number of pronunciations to download and play")
+var numSay = flag.Int("n", 3, "(`max`) number of pronunciations to play; <= 0 for all")
+var showFiles = flag.Bool("showFiles", false, "open the folder with the cached pronunciation files, instead of playing the files (using the command 'open')")
 var fallback = flag.String("fallback", "", "if no pronuncations are found, fallback to using the 'say' command with this `voice`")
 var nossl = flag.Bool("nossl", false, "don't use ssl when communicating with forvo.com; about twice as fast, but exposes your api key in plaintext")
 var bench = flag.Bool("bench", false, "time the request to forvo.com")
@@ -46,9 +48,6 @@ options:
 	if apiKey == "" {
 		fatal("must set FORVO_API_KEY in environment")
 	}
-	if *numDL < 1 {
-		fatal("-num must be >= 1")
-	}
 	*word = strings.ToLower(*word) // pretty sure forvo doesn't distinguish by case, so go ahead and normalize and get more use out of the cache
 	req := Req{*word, *lang}
 	resp, err := CacheResp(req)
@@ -66,22 +65,32 @@ options:
 		}
 	} else {
 		tot := len(resp.Items)
-		if tot > *numDL {
-			resp.Items = resp.Items[:*numDL]
+		if tot > *numSay && *numSay > 0 {
+			tot = *numSay
 		}
 		errs := false
-		i := 0
+		numSaid := 0
+		didShowFiles := false
 		CacheMP3s(req, *resp, func(mp3 MaybeMP3) {
-			i += 1
 			if mp3.Err != nil {
 				fmt.Fprintln(os.Stderr, "could not download mp3:", mp3.Err)
 				errs = true
 				return
 			}
-			fmt.Println("playing", i, "/", len(resp.Items), fmt.Sprint("(of ", tot, ")"))
-			err := PlayMP3(mp3.Fname)
-			if err != nil {
-				fatal("could not play mp3:", err)
+			if *showFiles {
+				if !didShowFiles {
+					if err := exec.Command("open", filepath.Dir(mp3.Fname)).Run(); err != nil {
+						fmt.Fprintln(os.Stderr, "could not show files:", err)
+					}
+					didShowFiles = true
+				}
+			} else {
+				numSaid++
+				fmt.Println("playing", numSaid, "/", tot, fmt.Sprint("(of ", len(resp.Items), ")"))
+				err := PlayMP3(mp3.Fname)
+				if err != nil {
+					fatal("could not play mp3:", err)
+				}
 			}
 		})
 		if errs {
