@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 )
 
@@ -64,29 +63,27 @@ options:
 			fmt.Println("no results")
 		}
 	} else {
-		tot := len(resp.Items)
-		if tot > *numSay && *numSay > 0 {
-			tot = *numSay
+		numSay := *numSay
+		if numSay <= 0 {
+			numSay = len(resp.Items)
+		}
+		if *showFiles {
+			if err := exec.Command("open", req.CacheDir()).Run(); err != nil {
+				fatal("could not show files:", err)
+			}
+			numSay = 0
 		}
 		errs := false
 		numSaid := 0
-		didShowFiles := false
 		CacheMP3s(req, *resp, func(mp3 MaybeMP3) {
 			if mp3.Err != nil {
 				fmt.Fprintln(os.Stderr, "could not download mp3:", mp3.Err)
 				errs = true
 				return
 			}
-			if *showFiles {
-				if !didShowFiles {
-					if err := exec.Command("open", filepath.Dir(mp3.Fname)).Run(); err != nil {
-						fmt.Fprintln(os.Stderr, "could not show files:", err)
-					}
-					didShowFiles = true
-				}
-			} else {
+			if numSaid < numSay {
 				numSaid++
-				fmt.Println("playing", numSaid, "/", tot, fmt.Sprint("(of ", len(resp.Items), ")"))
+				fmt.Println("playing", numSaid, "/", numSay, fmt.Sprint("(of ", len(resp.Items), ")"))
 				err := PlayMP3(mp3.Fname)
 				if err != nil {
 					fatal("could not play mp3:", err)

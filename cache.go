@@ -11,18 +11,6 @@ import (
 
 var cacheDir = os.Getenv("HOME") + "/.forvocache"
 
-func (req Req) CacheDir() string {
-	return cacheDir + "/" + req.LangCode + "/" + sanitizeFname(req.Word)
-}
-
-func (req Req) CacheFname() string {
-	return req.CacheDir() + "/.resp.json"
-}
-
-func (req Req) CacheMP3Fname(index int) string {
-	return fmt.Sprintf("%s/%s-%02d.mp3", req.CacheDir(), sanitizeFname(req.Word), index+1)
-}
-
 func CacheResp(req Req) (*Resp, error) {
 	if !*refreshCache {
 		if resp, err := getCachedResp(req); err == nil {
