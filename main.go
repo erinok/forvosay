@@ -38,6 +38,7 @@ options:
 		flag.PrintDefaults()
 	}
 	flag.Parse()
+	*word = strings.TrimSpace(*word)
 	if *word == "" {
 		fatal("must pass -word")
 	}
