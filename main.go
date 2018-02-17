@@ -65,8 +65,8 @@ options:
 		}
 	} else {
 		numSay := *numSay
-		if numSay <= 0 {
-			numSay = len(resp.Items)
+		if n := len(resp.Items); numSay <= 0 || numSay > n {
+			numSay = n
 		}
 		if *showFiles {
 			if err := exec.Command("open", req.CacheDir()).Run(); err != nil {
