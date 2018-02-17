@@ -53,9 +53,7 @@ func (req Req) CacheMP3Fname(index int) string {
 func Get(req Req) (*Resp, error) {
 	if *bench {
 		t0 := time.Now()
-		defer func() {
-			fmt.Println(time.Since(t0))
-		}()
+		defer func() { fmt.Println(time.Since(t0)) }()
 	}
 	if req.Word == "0" {
 		req.Word = " 0" // workaround apparent forvo bug

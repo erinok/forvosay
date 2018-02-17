@@ -6,5 +6,5 @@ import (
 )
 
 func TestBasic(t *testing.T) {
-	fmt.Println(GetPronunciations(Req{"ich", "de"}))
+	fmt.Println(Get(Req{"ich", "de"}))
 }
