@@ -77,12 +77,12 @@ func Get(req Req) (*Resp, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("bad forvo HTPP status: %s", resp.Status)
-	}
 	buf, err := ioutil.ReadAll(resp.Body)
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("forvo complained: HTPP %s (%s)", resp.Status, string(buf))
+	}
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error reading forvo response body: %s", err)
 	}
 	var pr Resp
 	if err := json.Unmarshal(buf, &pr); err != nil {
