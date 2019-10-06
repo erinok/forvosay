@@ -1,0 +1,2 @@
+# github.com/atotto/clipboard v0.1.2
+github.com/atotto/clipboard

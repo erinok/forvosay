@@ -78,12 +78,13 @@ func lookup(word string) error {
 // lookup words from clipboard forever
 func lookupForever() {
 	var prev string
-	for i := 0;; i++ {
+	for i := 0; ; i++ {
 		if i > 0 {
-			time.Sleep(100*time.Millisecond)
+			time.Sleep(100 * time.Millisecond)
 		}
 		s, err := clipboard.ReadAll()
-		if err != nil || s == prev {
+		s = strings.TrimSpace(s)
+		if err != nil || s == prev || s == "" {
 			continue
 		}
 		prev = s
@@ -94,7 +95,7 @@ func lookupForever() {
 			fmt.Printf("skipping long text `%v...`, \n", s[:100])
 			continue
 		}
-		fmt.Printf("pronouncing `%v`...\n", s)		
+		fmt.Printf("pronouncing `%v`...\n", s)
 		err = lookup(s)
 		if err != nil {
 			fmt.Printf("error looking up `%v`: %v\n", s, err)

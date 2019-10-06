@@ -5,7 +5,7 @@ Caches results locally.
 To install:
 
 	brew install go mplayer
-	go get bitbucket.org/erinok/forvosay
+	go get github.com/erinok/forvosay
 
 	# set FORVO_API_KEY in your environment
 
