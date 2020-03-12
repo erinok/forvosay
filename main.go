@@ -15,18 +15,31 @@ import (
 )
 
 var word = flag.String("word", "", "say this `word` or phrase")
-var cb = flag.Bool("cb", false, "say words from the clipboard (run forever)")
+var forever = flag.Bool("forever", false, "say words from the clipboard (run forever)")
+var web = flag.Bool("web", false, "open cantoese.org w/ definition page")
 var lang = flag.String("lang", "", "2-letter language `code`")
 var refreshCache = flag.Bool("refresh", false, "download results even if already in cache")
-var numSay = flag.Int("n", 3, "(`max`) number of pronunciations to play; <= 0 for all")
+var numSay = flag.Int("n", 3, "(`max`) number of pronunciations to play; < 0 for all")
 var showFiles = flag.Bool("showFiles", false, "open the folder with the cached pronunciation files, instead of playing the files (using the command 'open')")
 var fallback = flag.String("fallback", "", "if no pronuncations are found, fallback to using the 'say' command with this `voice`")
 var nossl = flag.Bool("nossl", false, "don't use ssl when communicating with forvo.com; about twice as fast, but exposes your api key in plaintext")
 var bench = flag.Bool("bench", false, "time the request to forvo.com")
 
+func lookupWeb(word string) {
+	cmd := exec.Command("open", "-a", "Safari", "--", "https://cantonese.org/search.php?q=" + word)
+	// fmt.Println("command:", cmd)
+	err := cmd.Run()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "error opening safari:", err)
+	}
+}
+
 func lookup(word string) error {
 	word = strings.TrimSpace(word)
 	word = strings.ToLower(word) // pretty sure forvo doesn't distinguish by case, so go ahead and normalize and get more use out of the cache
+	if *web {
+		go lookupWeb(word)
+	}
 	req := Req{word, *lang}
 	resp, err := CacheResp(req)
 	if err != nil {
@@ -43,7 +56,7 @@ func lookup(word string) error {
 		}
 	} else {
 		numSay := *numSay
-		if n := len(resp.Items); numSay <= 0 || numSay > n {
+		if n := len(resp.Items); numSay < 0 || numSay > n {
 			numSay = n
 		}
 		if *showFiles {
@@ -88,7 +101,10 @@ func lookupForever() {
 			continue
 		}
 		prev = s
-		if i > 0 {
+		if i == 0 {
+			continue
+		}
+		if i > 1 {
 			fmt.Println()
 		}
 		if len(s) > 100 {
@@ -127,11 +143,11 @@ options:
 	if apiKey == "" {
 		fatal("must set FORVO_API_KEY in environment")
 	}
-	if *cb {
+	if *forever {
 		lookupForever()
 	}
 	if *word == "" {
-		fatal("must pass -word or -cb")
+		fatal("must pass -word or -forever")
 	}
 	err := lookup(*word)
 	if err != nil {
