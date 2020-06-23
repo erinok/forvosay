@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/atotto/clipboard"
@@ -26,7 +27,7 @@ var nossl = flag.Bool("nossl", false, "don't use ssl when communicating with for
 var bench = flag.Bool("bench", false, "time the request to forvo.com")
 
 func lookupWeb(word string) {
-	cmd := exec.Command("open", "-a", "Safari", "--", "https://cantonese.org/search.php?q=" + word)
+	cmd := exec.Command("open", "-a", "Safari", "--", "https://cantonese.org/search.php?q="+word)
 	// fmt.Println("command:", cmd)
 	err := cmd.Run()
 	if err != nil {
@@ -35,6 +36,10 @@ func lookupWeb(word string) {
 }
 
 func lookup(word string) error {
+	return lookupFancy(word, func() bool { return true })
+}
+
+func lookupFancy(word string, keepGoing func() bool) error {
 	word = strings.TrimSpace(word)
 	word = strings.ToLower(word) // pretty sure forvo doesn't distinguish by case, so go ahead and normalize and get more use out of the cache
 	if *web {
@@ -72,7 +77,7 @@ func lookup(word string) error {
 				errs = append(errs, fmt.Errorf("could not download mp3: %v", mp3.Err))
 				return
 			}
-			if numSaid < numSay {
+			if numSaid < numSay && keepGoing() {
 				numSaid++
 				fmt.Println("playing", numSaid, "/", numSay, fmt.Sprint("(of ", len(resp.Items), ")"))
 				err := PlayMP3(mp3.Fname)
@@ -91,9 +96,10 @@ func lookup(word string) error {
 // lookup words from clipboard forever
 func lookupForever() {
 	var prev string
+	var w int32
 	for i := 0; ; i++ {
 		if i > 0 {
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(10 * time.Millisecond)
 		}
 		s, err := clipboard.ReadAll()
 		s = strings.TrimSpace(s)
@@ -112,10 +118,13 @@ func lookupForever() {
 			continue
 		}
 		fmt.Printf("pronouncing `%v`...\n", s)
-		err = lookup(s)
-		if err != nil {
-			fmt.Printf("error looking up `%v`: %v\n", s, err)
-		}
+		this := atomic.AddInt32(&w, 1)
+		go func() {
+			err = lookupFancy(s, func() bool { return atomic.AddInt32(&w, 0) == this })
+			if err != nil {
+				fmt.Printf("error looking up `%v`: %v\n", s, err)
+			}
+		}()
 	}
 }
 
