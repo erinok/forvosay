@@ -116,12 +116,13 @@ func lookupForever() {
 		if err != nil || s == prev || s == "" {
 			continue
 		}
-		if maybePassword(s) {
-			fmt.Printf("skipping word containing punctuation (in case it's a password)")
-			continue
-		}
 		prev = s
 		if i == 0 {
+			// skip whatever's initially on the clipboard (somehow it's annoying to pick this up)
+			continue
+		}
+		if maybePassword(s) {
+			fmt.Printf("skipping word containing punctuation (in case it's a password)")
 			continue
 		}
 		if i > 1 {
