@@ -11,7 +11,6 @@ import (
 	"strings"
 	"sync/atomic"
 	"time"
-	"unicode"
 
 	"github.com/atotto/clipboard"
 )
@@ -95,12 +94,13 @@ func lookupFancy(word string, keepGoing func() bool) error {
 }
 
 func maybePassword(s string) bool {
+	n := 0
 	for _, r := range s {
-		if unicode.IsPunct(r) {
-			return true
+		if r == '-' || r == '.' {
+			n++
 		}
 	}
-	return false
+	return n >= 3
 }
 
 // lookup words from clipboard forever
@@ -122,7 +122,7 @@ func lookupForever() {
 			continue
 		}
 		if maybePassword(s) {
-			fmt.Printf("skipping word containing punctuation (in case it's a password)")
+			fmt.Printf("skipping word containing too much punctuation (in case it's a password)")
 			continue
 		}
 		if i > 1 {
