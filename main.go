@@ -100,7 +100,7 @@ func maybePassword(s string) bool {
 			n++
 		}
 	}
-	return n >= 3
+	return n >= 2
 }
 
 // lookup words from clipboard forever
