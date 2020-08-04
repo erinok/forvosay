@@ -6,6 +6,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net/url"
 	"os"
 	"os/exec"
 	"strings"
@@ -17,7 +18,6 @@ import (
 
 var word = flag.String("word", "", "say this `word` or phrase")
 var forever = flag.Bool("forever", false, "say words from the clipboard (run forever)")
-var web = flag.Bool("web", false, "open cantoese.org w/ definition page")
 var lang = flag.String("lang", "", "2-letter language `code`")
 var refreshCache = flag.Bool("refresh", false, "download results even if already in cache")
 var numSay = flag.Int("n", 3, "(`max`) number of pronunciations to play; < 0 for all")
@@ -26,13 +26,25 @@ var fallback = flag.String("fallback", "", "if no pronuncations are found, fallb
 var nossl = flag.Bool("nossl", false, "don't use ssl when communicating with forvo.com; about twice as fast, but exposes your api key in plaintext")
 var bench = flag.Bool("bench", false, "time the request to forvo.com")
 
-func lookupWeb(word string) {
-	cmd := exec.Command("open", "-a", "Safari", "--", "https://cantonese.org/search.php?q="+word)
+var canto = flag.Bool("canto", false, "open cantoese.org w/ definition page")
+var yandex = flag.Bool("yandex", false, "also look up words on yandex image search")
+
+func lookupWebCanto(word string) {
+	cmd := exec.Command("open", "-a", "Safari", "--", "https://cantonese.org/search.php?q="+url.QueryEscape(word))
 	// fmt.Println("command:", cmd)
 	err := cmd.Run()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "error opening safari:", err)
 	}
+}
+
+func lookupWebYandex(word string) {
+	cmd := exec.Command("open", "https://yandex.ru/images/search?text="+url.QueryEscape(word))
+	// fmt.Println("command:", cmd)
+	err := cmd.Run()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "error opening url:", err)
+	}	
 }
 
 func lookup(word string) error {
@@ -42,8 +54,11 @@ func lookup(word string) error {
 func lookupFancy(word string, keepGoing func() bool) error {
 	word = strings.TrimSpace(word)
 	word = strings.ToLower(word) // pretty sure forvo doesn't distinguish by case, so go ahead and normalize and get more use out of the cache
-	if *web {
-		go lookupWeb(word)
+	if *canto {
+		go lookupWebCanto(word)
+	}
+	if *yandex {
+		go lookupWebYandex(word)
 	}
 	req := Req{word, *lang}
 	resp, err := CacheResp(req)
