@@ -26,8 +26,10 @@ var fallback = flag.String("fallback", "", "if no pronuncations are found, fallb
 var nossl = flag.Bool("nossl", false, "don't use ssl when communicating with forvo.com; about twice as fast, but exposes your api key in plaintext")
 var bench = flag.Bool("bench", false, "time the request to forvo.com")
 
-var canto = flag.Bool("canto", false, "open cantoese.org w/ definition page")
-var yandex = flag.Bool("yandex", false, "also look up words on yandex image search")
+var canto = flag.Bool("canto", false, "also search cantonese.org for definitions")
+var yandex = flag.Bool("yandex", false, "also search yandex for images")
+var gi_it = flag.Bool("gi/it", false, "also search google.it for images")
+var dict = flag.Bool("dict", false, "also open dict:// (the builtin mac dictionary) for definitions")
 
 func lookupWebCanto(word string) {
 	cmd := exec.Command("open", "-a", "Safari", "--", "https://cantonese.org/search.php?q="+url.QueryEscape(word))
@@ -47,6 +49,24 @@ func lookupWebYandex(word string) {
 	}	
 }
 
+func lookupWebGoogleImagesItaly(word string) {
+	cmd := exec.Command("open", "https://www.google.it/search?tbm=isch&q="+url.QueryEscape(word))
+	// fmt.Println("command:", cmd)
+	err := cmd.Run()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "error opening url:", err)
+	}	
+}
+
+func lookupDict(word string) {
+	cmd := exec.Command("open", "dict://"+url.QueryEscape(word))
+	// fmt.Println("command:", cmd)
+	err := cmd.Run()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "error opening url:", err)
+	}
+}
+
 func lookup(word string) error {
 	return lookupFancy(word, func() bool { return true })
 }
@@ -59,6 +79,12 @@ func lookupFancy(word string, keepGoing func() bool) error {
 	}
 	if *yandex {
 		go lookupWebYandex(word)
+	}
+	if *gi_it {
+		go lookupWebGoogleImagesItaly(word)
+	}
+	if *dict {
+		go lookupDict(word)
 	}
 	req := Req{word, *lang}
 	resp, err := CacheResp(req)
