@@ -28,11 +28,11 @@ var bench = flag.Bool("bench", false, "time the request to forvo.com")
 
 var canto = flag.Bool("canto", false, "also search cantonese.org for definitions")
 var yandex = flag.Bool("yandex", false, "also search yandex for images")
-var gi_it = flag.Bool("gi/it", false, "also search google.it for images")
+var gi = flag.String("gi", "", "also search google.GI for images")
 var dict = flag.Bool("dict", false, "also open dict:// (the builtin mac dictionary) for definitions")
 
 func lookupWebCanto(word string) {
-	cmd := exec.Command("open", "-a", "Safari", "--", "https://cantonese.org/search.php?q="+url.QueryEscape(word))
+	cmd := exec.Command("open", "https://cantonese.org/search.php?q="+url.QueryEscape(word))
 	// fmt.Println("command:", cmd)
 	err := cmd.Run()
 	if err != nil {
@@ -49,8 +49,8 @@ func lookupWebYandex(word string) {
 	}	
 }
 
-func lookupWebGoogleImagesItaly(word string) {
-	cmd := exec.Command("open", "https://www.google.it/search?tbm=isch&q="+url.QueryEscape(word))
+func lookupWebGoogleImages(country string, word string) {
+	cmd := exec.Command("open", "https://www.google." + country + "/search?tbm=isch&q="+url.QueryEscape(word))
 	// fmt.Println("command:", cmd)
 	err := cmd.Run()
 	if err != nil {
@@ -75,16 +75,16 @@ func lookupFancy(word string, keepGoing func() bool) error {
 	word = strings.TrimSpace(word)
 	word = strings.ToLower(word) // pretty sure forvo doesn't distinguish by case, so go ahead and normalize and get more use out of the cache
 	if *canto {
-		go lookupWebCanto(word)
+		lookupWebCanto(word)
 	}
 	if *yandex {
-		go lookupWebYandex(word)
+		lookupWebYandex(word)
 	}
-	if *gi_it {
-		go lookupWebGoogleImagesItaly(word)
+	if *gi != "" {
+		lookupWebGoogleImages(*gi, word)
 	}
 	if *dict {
-		go lookupDict(word)
+		lookupDict(word)
 	}
 	req := Req{word, *lang}
 	resp, err := CacheResp(req)
