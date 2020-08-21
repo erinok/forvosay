@@ -27,9 +27,11 @@ var nossl = flag.Bool("nossl", false, "don't use ssl when communicating with for
 var bench = flag.Bool("bench", false, "time the request to forvo.com")
 
 var canto = flag.Bool("canto", false, "also search cantonese.org for definitions")
-var yandex = flag.Bool("yandex", false, "also search yandex for images")
+var yi = flag.Bool("yi", false, "also search yandex for images")
 var gi = flag.String("gi", "", "also search google.GI for images")
 var dict = flag.Bool("dict", false, "also open dict:// (the builtin mac dictionary) for definitions")
+
+var yt = flag.String("yt", "", "search sentences yandex for translations from language LA to language LB (`LA-LB`)")
 
 func lookupWebCanto(word string) {
 	cmd := exec.Command("open", "https://cantonese.org/search.php?q="+url.QueryEscape(word))
@@ -40,13 +42,22 @@ func lookupWebCanto(word string) {
 	}
 }
 
-func lookupWebYandex(word string) {
+func lookupWebYandexImages(word string) {
 	cmd := exec.Command("open", "https://yandex.ru/images/search?text="+url.QueryEscape(word))
 	// fmt.Println("command:", cmd)
 	err := cmd.Run()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "error opening url:", err)
-	}	
+	}
+}
+
+func lookupWebYandexTrans(lang, s string) {
+	cmd := exec.Command("open", "https://translate.yandex.ru/?lang=" + lang + "&text="+url.QueryEscape(s))
+	// fmt.Println("command:", cmd)
+	err := cmd.Run()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "error opening url:", err)
+	}
 }
 
 func lookupWebGoogleImages(country string, word string) {
@@ -71,14 +82,21 @@ func lookup(word string) error {
 	return lookupFancy(word, func() bool { return true })
 }
 
+func lookupSentence(s string) error {
+	if *yt != "" {
+		lookupWebYandexTrans(*yt, s)
+	}
+	return nil
+}
+
 func lookupFancy(word string, keepGoing func() bool) error {
 	word = strings.TrimSpace(word)
 	word = strings.ToLower(word) // pretty sure forvo doesn't distinguish by case, so go ahead and normalize and get more use out of the cache
 	if *canto {
 		lookupWebCanto(word)
 	}
-	if *yandex {
-		lookupWebYandex(word)
+	if *yi {
+		lookupWebYandexImages(word)
 	}
 	if *gi != "" {
 		lookupWebGoogleImages(*gi, word)
@@ -173,6 +191,11 @@ func lookupForever() {
 			fmt.Printf("skipping long text `%v...`, \n", s[:100])
 			continue
 		}
+		if len(strings.Fields(s)) >= 4 {
+			fmt.Printf("looking up sentence `%v`...\n", s)
+			lookupSentence(s)
+			continue
+		}		
 		fmt.Printf("pronouncing `%v`...\n", s)
 		this := atomic.AddInt32(&w, 1)
 		go func() {
