@@ -153,6 +153,9 @@ func lookupFancy(word string, keepGoing func() bool) error {
 }
 
 func maybePassword(s string) bool {
+	if maybeSentence(s) {
+		return false // if it's (probably) a sentence, it's (probably) not a password
+	}
 	n := 0
 	for _, r := range s {
 		if r == '-' || r == '.' {
@@ -160,6 +163,10 @@ func maybePassword(s string) bool {
 		}
 	}
 	return n >= 2
+}
+
+func maybeSentence(s string) bool {
+	return len(strings.Fields(s)) >= 4
 }
 
 // lookup words from clipboard forever
@@ -187,11 +194,7 @@ func lookupForever() {
 		if i > 1 {
 			fmt.Println()
 		}
-		if len(s) > 100 {
-			fmt.Printf("skipping long text `%v...`, \n", s[:100])
-			continue
-		}
-		if len(strings.Fields(s)) >= 4 {
+		if maybeSentence(s) {
 			fmt.Printf("looking up sentence `%v`...\n", s)
 			lookupSentence(s)
 			continue
