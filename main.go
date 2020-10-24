@@ -4,6 +4,7 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"math/rand"
@@ -15,6 +16,7 @@ import (
 	"time"
 
 	"github.com/atotto/clipboard"
+	"github.com/tevino/abool"
 )
 
 var word = flag.String("word", "", "say this `word` or phrase")
@@ -184,26 +186,24 @@ func maybeSentence(s string) bool {
 func lookupForever() {
 	var prev string
 	var w int32
-	// var repeat = make(chan struct{}, 1)
-	// go func() {
-	// 	b := bufio.NewReader(os.Stdin)
-	// 	for {
-	// 		b.ReadString('\n')
-	// 		repeat <- struct{}{}
-	// 	}
-	// }()
+	repeat := abool.New()
+	go func() {
+		b := bufio.NewReader(os.Stdin)
+		for {
+			b.ReadString('\n')
+			repeat.Set()
+		}
+	}()
 	for i := 0; ; i++ {
 		if i > 0 {
 			time.Sleep(100 * time.Millisecond)
 		}
 		s, err := clipboard.ReadAll()
 		s = strings.TrimSpace(s)
-		// if _, ok := <-repeat; ok {
-		// 	prev = ""
-		// }
-		if err != nil || s == prev || s == "" {
+		if err != nil || (s == prev && !repeat.IsSet()) || s == "" {
 			continue
 		}
+		repeat.UnSet()
 		prev = s
 		if i == 0 {
 			// skip whatever's initially on the clipboard (somehow it's annoying to pick this up)
