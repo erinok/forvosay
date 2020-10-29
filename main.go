@@ -8,7 +8,7 @@ import (
 	"flag"
 	"fmt"
 	"math/rand"
-    "net/url"
+	"net/url"
 	"os"
 	"os/exec"
 	"strings"
@@ -57,7 +57,7 @@ func lookupWebYandexImages(word string) {
 }
 
 func lookupWebYandexTrans(lang, s string) {
-	cmd := exec.Command("open", "https://translate.yandex.ru/?lang=" + lang + "&text="+url.QueryEscape(s))
+	cmd := exec.Command("open", "https://translate.yandex.ru/?lang="+lang+"&text="+url.QueryEscape(s))
 	// fmt.Println("command:", cmd)
 	err := cmd.Run()
 	if err != nil {
@@ -66,12 +66,12 @@ func lookupWebYandexTrans(lang, s string) {
 }
 
 func lookupWebGoogleImages(country string, word string) {
-	cmd := exec.Command("open", "https://www.google." + country + "/search?tbm=isch&q="+url.QueryEscape(word))
+	cmd := exec.Command("open", "https://www.google."+country+"/search?tbm=isch&q="+url.QueryEscape(word))
 	// fmt.Println("command:", cmd)
 	err := cmd.Run()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "error opening url:", err)
-	}	
+	}
 }
 
 func lookupDict(word string) {
@@ -108,13 +108,11 @@ func onlyMinimalPlayCounts(req Req, resp Resp, getPlayCount func(string) int) Re
 	return resp2
 }
 
-
-
 func lookupSentence(s string) error {
-if *yt != "" {
-lookupWebYandexTrans(*yt, s)
-}
-return nil
+	if *yt != "" {
+		lookupWebYandexTrans(*yt, s)
+	}
+	return nil
 }
 
 func lookupFancy(word string, getPlayCount func(string) int, incrPlayCount func(string), keepGoing func() bool) error {
@@ -161,7 +159,7 @@ func lookupFancy(word string, getPlayCount func(string) int, incrPlayCount func(
 		rand.Shuffle(topSay, func(i, j int) {
 			resp.Items[i], resp.Items[j] = resp.Items[j], resp.Items[i]
 		})
-		
+
 		if *showFiles {
 			if err := exec.Command("open", req.CacheDir()).Run(); err != nil {
 				fatal("could not show files:", err)
@@ -206,10 +204,8 @@ func maybePassword(s string) bool {
 	return n >= 2
 }
 
-
-
 func maybeSentence(s string) bool {
-return len(strings.Fields(s)) >= 4
+	return len(strings.Fields(s)) >= 4
 }
 
 func trackPlayCounts() (get func(string) int, incr func(string)) {
