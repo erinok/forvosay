@@ -6,7 +6,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	"net/url"
+	"math/rand"
+    "net/url"
 	"os"
 	"os/exec"
 	"strings"
@@ -21,6 +22,7 @@ var forever = flag.Bool("forever", false, "say words from the clipboard (run for
 var lang = flag.String("lang", "", "2-letter language `code`")
 var refreshCache = flag.Bool("refresh", false, "download results even if already in cache")
 var numSay = flag.Int("n", 3, "(`max`) number of pronunciations to play; < 0 for all")
+var topSay = flag.Int("top", 5, "draw the N pronunciations to play randomly from the top `T`")
 var showFiles = flag.Bool("showFiles", false, "open the folder with the cached pronunciation files, instead of playing the files (using the command 'open')")
 var fallback = flag.String("fallback", "", "if no pronuncations are found, fallback to using the 'say' command with this `voice`")
 var nossl = flag.Bool("nossl", false, "don't use ssl when communicating with forvo.com; about twice as fast, but exposes your api key in plaintext")
@@ -120,15 +122,24 @@ func lookupFancy(word string, keepGoing func() bool) error {
 		}
 	} else {
 		numSay := *numSay
-		if n := len(resp.Items); numSay < 0 || numSay > n {
+		topSay := *topSay
+		n := len(resp.Items)
+		if numSay < 0 || numSay > n {
 			numSay = n
 		}
+		if topSay < 0 || topSay > n {
+			topSay = n
+		}
+		rand.Shuffle(topSay, func(i, j int) {
+			resp.Items[i], resp.Items[j] = resp.Items[j], resp.Items[i]
+		})
 		if *showFiles {
 			if err := exec.Command("open", req.CacheDir()).Run(); err != nil {
 				fatal("could not show files:", err)
 			}
 			numSay = 0
 		}
+
 		var errs []error
 		numSaid := 0
 		CacheMP3s(req, *resp, func(mp3 MaybeMP3) {
@@ -173,12 +184,23 @@ func maybeSentence(s string) bool {
 func lookupForever() {
 	var prev string
 	var w int32
+	// var repeat = make(chan struct{}, 1)
+	// go func() {
+	// 	b := bufio.NewReader(os.Stdin)
+	// 	for {
+	// 		b.ReadString('\n')
+	// 		repeat <- struct{}{}
+	// 	}
+	// }()
 	for i := 0; ; i++ {
 		if i > 0 {
 			time.Sleep(100 * time.Millisecond)
 		}
 		s, err := clipboard.ReadAll()
 		s = strings.TrimSpace(s)
+		// if _, ok := <-repeat; ok {
+		// 	prev = ""
+		// }
 		if err != nil || s == prev || s == "" {
 			continue
 		}
@@ -228,6 +250,10 @@ options:
 		flag.PrintDefaults()
 	}
 	flag.Parse()
+	if len(flag.Args()) > 0 {
+		fatal("unknown argument:", flag.Args()[0])
+	}
+	rand.Seed(int64(time.Now().Unix()))
 	if *lang == "" {
 		fatal("must pass -lang")
 	}
