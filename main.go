@@ -84,7 +84,7 @@ func lookupDict(word string) {
 }
 
 func lookup(word string) error {
-	return lookupFancy(word, func(_ string) int { return 0 }, func(_ string) {}, func() bool { return true })
+	return lookupFancy(word, false, func(_ string) int { return 0 }, func(_ string) {}, func() bool { return true })
 }
 
 func onlyMinimalPlayCounts(req Req, resp Resp, getPlayCount func(string) int) Resp {
@@ -115,20 +115,22 @@ func lookupSentence(s string) error {
 	return nil
 }
 
-func lookupFancy(word string, getPlayCount func(string) int, incrPlayCount func(string), keepGoing func() bool) error {
+func lookupFancy(word string, repeat bool, getPlayCount func(string) int, incrPlayCount func(string), keepGoing func() bool) error {
 	word = strings.TrimSpace(word)
 	word = strings.ToLower(word) // pretty sure forvo doesn't distinguish by case, so go ahead and normalize and get more use out of the cache
-	if *canto {
-		lookupWebCanto(word)
-	}
-	if *yi {
-		lookupWebYandexImages(word)
-	}
-	if *gi != "" {
-		lookupWebGoogleImages(*gi, word)
-	}
-	if *dict {
-		lookupDict(word)
+	if !repeat {
+		if *canto {
+			lookupWebCanto(word)
+		}
+		if *yi {
+			lookupWebYandexImages(word)
+		}
+		if *gi != "" {
+			lookupWebGoogleImages(*gi, word)
+		}
+		if *dict {
+			lookupDict(word)
+		}
 	}
 	req := Req{word, *lang}
 	resp, err := CacheResp(req)
@@ -267,7 +269,7 @@ func lookupForever() {
 		}
 		this := atomic.AddInt32(&w, 1)
 		go func() {
-			err = lookupFancy(s, getPlayCount, incrPlayCount, func() bool { return atomic.AddInt32(&w, 0) == this })
+			err = lookupFancy(s, r, getPlayCount, incrPlayCount, func() bool { return atomic.AddInt32(&w, 0) == this })
 			if err != nil {
 				fmt.Printf("error looking up `%v`: %v\n", s, err)
 			}
