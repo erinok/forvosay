@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -83,17 +84,40 @@ func lookupDict(word string) {
 }
 
 func lookup(word string) error {
-	return lookupFancy(word, func() bool { return true })
+	return lookupFancy(word, func(_ string) int { return 0 }, func(_ string) {}, func() bool { return true })
 }
+
+func onlyMinimalPlayCounts(req Req, resp Resp, getPlayCount func(string) int) Resp {
+	n := len(resp.Items)
+	c := make([]int, n)
+	minC := 1000
+	for i, r := range resp.Items {
+		fn := req.CacheMP3Fname(r.Index)
+		c[i] = getPlayCount(fn)
+		if c[i] < minC {
+			minC = c[i]
+		}
+
+	}
+	resp2 := Resp{}
+	for i, item := range resp.Items {
+		if c[i] == minC {
+			resp2.Items = append(resp2.Items, item)
+		}
+	}
+	return resp2
+}
+
+
 
 func lookupSentence(s string) error {
-	if *yt != "" {
-		lookupWebYandexTrans(*yt, s)
-	}
-	return nil
+if *yt != "" {
+lookupWebYandexTrans(*yt, s)
+}
+return nil
 }
 
-func lookupFancy(word string, keepGoing func() bool) error {
+func lookupFancy(word string, getPlayCount func(string) int, incrPlayCount func(string), keepGoing func() bool) error {
 	word = strings.TrimSpace(word)
 	word = strings.ToLower(word) // pretty sure forvo doesn't distinguish by case, so go ahead and normalize and get more use out of the cache
 	if *canto {
@@ -123,9 +147,11 @@ func lookupFancy(word string, keepGoing func() bool) error {
 			fmt.Println("no results")
 		}
 	} else {
+		origN := len(resp.Items)
+		*resp = onlyMinimalPlayCounts(req, *resp, getPlayCount)
+		n := len(resp.Items)
 		numSay := *numSay
 		topSay := *topSay
-		n := len(resp.Items)
 		if numSay < 0 || numSay > n {
 			numSay = n
 		}
@@ -135,6 +161,7 @@ func lookupFancy(word string, keepGoing func() bool) error {
 		rand.Shuffle(topSay, func(i, j int) {
 			resp.Items[i], resp.Items[j] = resp.Items[j], resp.Items[i]
 		})
+		
 		if *showFiles {
 			if err := exec.Command("open", req.CacheDir()).Run(); err != nil {
 				fatal("could not show files:", err)
@@ -151,7 +178,8 @@ func lookupFancy(word string, keepGoing func() bool) error {
 			}
 			if numSaid < numSay && keepGoing() {
 				numSaid++
-				fmt.Println("playing", numSaid, "/", numSay, fmt.Sprint("(of ", len(resp.Items), ")"))
+				fmt.Println(mp3.Fname, "of", origN)
+				incrPlayCount(mp3.Fname)
 				err := PlayMP3(mp3.Fname)
 				if err != nil {
 					errs = append(errs, fmt.Errorf("could not play mp3: %v", err))
@@ -178,8 +206,26 @@ func maybePassword(s string) bool {
 	return n >= 2
 }
 
+
+
 func maybeSentence(s string) bool {
-	return len(strings.Fields(s)) >= 4
+return len(strings.Fields(s)) >= 4
+}
+
+func trackPlayCounts() (get func(string) int, incr func(string)) {
+	d := map[string]int{}
+	mu := sync.Mutex{}
+	get = func(fname string) int {
+		mu.Lock()
+		defer mu.Unlock()
+		return d[fname]
+	}
+	incr = func(fname string) {
+		mu.Lock()
+		defer mu.Unlock()
+		d[fname] = d[fname] + 1
+	}
+	return
 }
 
 // lookup words from clipboard forever
@@ -187,6 +233,7 @@ func lookupForever() {
 	var prev string
 	var w int32
 	repeat := abool.New()
+	getPlayCount, incrPlayCount := trackPlayCounts()
 	go func() {
 		b := bufio.NewReader(os.Stdin)
 		for {
@@ -200,7 +247,8 @@ func lookupForever() {
 		}
 		s, err := clipboard.ReadAll()
 		s = strings.TrimSpace(s)
-		if err != nil || (s == prev && !repeat.IsSet()) || s == "" {
+		r := repeat.IsSet()
+		if err != nil || (s == prev && !r) || s == "" {
 			continue
 		}
 		repeat.UnSet()
@@ -213,18 +261,17 @@ func lookupForever() {
 			fmt.Printf("skipping word containing too much punctuation (in case it's a password)")
 			continue
 		}
-		if i > 1 {
+		if i > 1 && !r {
 			fmt.Println()
 		}
 		if maybeSentence(s) {
 			fmt.Printf("looking up sentence `%v`...\n", s)
 			lookupSentence(s)
 			continue
-		}		
-		fmt.Printf("pronouncing `%v`...\n", s)
+		}
 		this := atomic.AddInt32(&w, 1)
 		go func() {
-			err = lookupFancy(s, func() bool { return atomic.AddInt32(&w, 0) == this })
+			err = lookupFancy(s, getPlayCount, incrPlayCount, func() bool { return atomic.AddInt32(&w, 0) == this })
 			if err != nil {
 				fmt.Printf("error looking up `%v`: %v\n", s, err)
 			}

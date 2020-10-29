@@ -27,6 +27,7 @@ type Pronunciation struct {
 	Rate             int
 	NumVotes         int `json:"num_votes"`
 	NumPositiveVotes int `json:"num_positive_votes"`
+	Index            int
 }
 
 type Resp struct {
@@ -87,6 +88,9 @@ func Get(req Req) (*Resp, error) {
 	var pr Resp
 	if err := json.Unmarshal(buf, &pr); err != nil {
 		return nil, fmt.Errorf("forvo response «%s» could not be unmarshalled as json: %v", err, string(buf))
+	}
+	for i := range pr.Items {
+		pr.Items[i].Index = i
 	}
 	return &pr, nil
 }
