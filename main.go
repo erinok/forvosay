@@ -230,13 +230,39 @@ func trackPlayCounts() (get func(string) int, incr func(string)) {
 func lookupForever() {
 	var prev string
 	var w int32
+	var word atomic.Value
 	repeat := abool.New()
 	getPlayCount, incrPlayCount := trackPlayCounts()
 	go func() {
 		b := bufio.NewReader(os.Stdin)
 		for {
-			b.ReadString('\n')
-			repeat.Set()
+			s, err := b.ReadString('\n')
+			if err != nil {
+				fmt.Println("error reading input:", err, "giving up...")
+				return
+			}
+			s = strings.TrimSpace(s)
+			if s == "" {
+				repeat.Set()
+				continue
+			}
+			w, _ := word.Load().(string)
+			if w == "" {
+				continue
+			}
+			switch s {
+			case "d":
+				lookupDict(w)
+			case "y":
+				lookupWebYandexImages(w)
+			case "g":
+				lookupWebGoogleImages(*lang, w)
+			case "c":
+				lookupWebCanto(w)
+			default:
+				fmt.Println("unknown input:", s)
+				fmt.Println("try: d, y, g, c")
+			}
 		}
 	}()
 	for i := 0; ; i++ {
@@ -250,6 +276,7 @@ func lookupForever() {
 			continue
 		}
 		repeat.UnSet()
+		word.Store(s)
 		prev = s
 		if i == 0 {
 			// skip whatever's initially on the clipboard (somehow it's annoying to pick this up)
