@@ -36,7 +36,8 @@ var yi = flag.Bool("yi", false, "also search yandex for images")
 var gi = flag.String("gi", "", "also search google.GI for images")
 var dict = flag.Bool("dict", false, "also open dict:// (the builtin mac dictionary) for definitions")
 
-var yt = flag.String("yt", "", "search sentences yandex for translations from language LA to language LB (`LA-LB`)")
+var yt = flag.String("yt", "", "yandex translate sentences from language LA to language LB (`LA-LB`)")
+var gt = flag.String("gt", "", "google sentences sentences from language LA to language LB (`LA-LB`)")
 
 func lookupWebCanto(word string) {
 	cmd := exec.Command("open", "https://cantonese.org/search.php?q="+url.QueryEscape(word))
@@ -58,6 +59,20 @@ func lookupWebYandexImages(word string) {
 
 func lookupWebYandexTrans(lang, s string) {
 	cmd := exec.Command("open", "https://translate.yandex.ru/?lang="+lang+"&text="+url.QueryEscape(s))
+	// fmt.Println("command:", cmd)
+	err := cmd.Run()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "error opening url:", err)
+	}
+}
+
+// lang format `SOURCE-DEST`
+func lookupWebGoogleTrans(lang, s string) {
+	sl_tl := strings.Split(lang, "-")
+	sl := url.QueryEscape(sl_tl[0])
+	tl := url.QueryEscape(sl_tl[1])
+	s = url.QueryEscape(s)
+	cmd := exec.Command("open", fmt.Sprint("https://translate.google.com/?sl=", sl, "&tl=", tl, "&text=", s, "&op=trranslate"))
 	// fmt.Println("command:", cmd)
 	err := cmd.Run()
 	if err != nil {
@@ -111,6 +126,9 @@ func onlyMinimalPlayCounts(req Req, resp Resp, getPlayCount func(string) int) Re
 func lookupSentence(s string) error {
 	if *yt != "" {
 		lookupWebYandexTrans(*yt, s)
+	}
+	if *gt != "" {
+		lookupWebGoogleTrans(*gt, s)
 	}
 	return nil
 }
