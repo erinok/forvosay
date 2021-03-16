@@ -138,6 +138,9 @@ func lookupFancy(word string, repeat bool, getPlayCount func(string) int, incrPl
 	word = strings.TrimSpace(word)
 	word = strings.ToLower(word) // pretty sure forvo doesn't distinguish by case, so go ahead and normalize and get more use out of the cache
 	if !repeat {
+		if *dict {
+			lookupDict(word)
+		}
 		if *canto {
 			lookupWebCanto(word)
 		}
@@ -146,9 +149,6 @@ func lookupFancy(word string, repeat bool, getPlayCount func(string) int, incrPl
 		}
 		if *gi != "" {
 			lookupWebGoogleImages(*gi, word)
-		}
-		if *dict {
-			lookupDict(word)
 		}
 	}
 	req := Req{word, *lang}
