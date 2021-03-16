@@ -15,6 +15,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"unicode/utf8"
 
 	"github.com/atotto/clipboard"
 	"github.com/tevino/abool"
@@ -225,6 +226,9 @@ func maybePassword(s string) bool {
 }
 
 func maybeSentence(s string) bool {
+	if *canto {
+		return utf8.RuneCountInString(s) >= 4
+	}
 	return len(strings.Fields(s)) >= 4
 }
 
