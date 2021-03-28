@@ -314,7 +314,7 @@ func lookupForever() {
 		if maybeSentence(s) {
 			fmt.Printf("looking up sentence `%v`...\n", s)
 			lookupSentence(s)
-			continue
+			r = true // hacky, only look for pronunciation, not other things
 		}
 		this := atomic.AddInt32(&w, 1)
 		go func() {
