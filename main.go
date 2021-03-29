@@ -100,7 +100,7 @@ func lookupDict(word string) {
 }
 
 func lookup(word string) error {
-	return lookupFancy(word, false, func(_ string) int { return 0 }, func(_ string) {}, func() bool { return true })
+	return lookupFancy(word, false, false, func(_ string) int { return 0 }, func(_ string) {}, func() bool { return true })
 }
 
 func onlyMinimalPlayCounts(req Req, resp Resp, getPlayCount func(string) int) Resp {
@@ -134,10 +134,11 @@ func lookupSentence(s string) error {
 	return nil
 }
 
-func lookupFancy(word string, repeat bool, getPlayCount func(string) int, incrPlayCount func(string), keepGoing func() bool) error {
+// TODO: this api is jank af
+func lookupFancy(word string, repeat bool, onlyForvo bool, getPlayCount func(string) int, incrPlayCount func(string), keepGoing func() bool) error {
 	word = strings.TrimSpace(word)
 	word = strings.ToLower(word) // pretty sure forvo doesn't distinguish by case, so go ahead and normalize and get more use out of the cache
-	if !repeat {
+	if !repeat && !onlyForvo {
 		if *dict {
 			lookupDict(word)
 		}
@@ -157,7 +158,7 @@ func lookupFancy(word string, repeat bool, getPlayCount func(string) int, incrPl
 		return fmt.Errorf("could not download results: %s", err)
 	}
 	if len(resp.Items) == 0 {
-		if *fallback != "" {
+		if *fallback != "" && !onlyForvo {
 			fmt.Println("no results; using 'say'")
 			if err := exec.Command("say", "-v", *fallback, word).Run(); err != nil {
 				return fmt.Errorf("could not 'say': %v", err)
@@ -311,14 +312,15 @@ func lookupForever() {
 		if i > 1 && !r {
 			fmt.Println()
 		}
+		onlyForvo := false
 		if maybeSentence(s) {
 			fmt.Printf("looking up sentence `%v`...\n", s)
 			lookupSentence(s)
-			r = true // hacky, only look for pronunciation, not other things
+			onlyForvo = true
 		}
 		this := atomic.AddInt32(&w, 1)
 		go func() {
-			err = lookupFancy(s, r, getPlayCount, incrPlayCount, func() bool { return atomic.AddInt32(&w, 0) == this })
+			err = lookupFancy(s, r, onlyForvo, getPlayCount, incrPlayCount, func() bool { return atomic.AddInt32(&w, 0) == this })
 			if err != nil {
 				fmt.Printf("error looking up `%v`: %v\n", s, err)
 			}
