@@ -23,10 +23,13 @@ import (
 
 var word = flag.String("word", "", "say this `word` or phrase")
 var forever = flag.Bool("forever", false, "say words from the clipboard (run forever)")
+
 var lang = flag.String("lang", "", "2-letter language `code`")
 var refreshCache = flag.Bool("refresh", false, "download results even if already in cache")
-var numSay = flag.Int("n", 3, "(`max`) number of pronunciations to play; < 0 for all")
+
+var numSay = flag.Int("n", 1, "(`max`) number of pronunciations to play; < 0 for all")
 var topSay = flag.Int("top", 5, "draw the N pronunciations to play randomly from the top `T`")
+
 var showFiles = flag.Bool("showFiles", false, "open the folder with the cached pronunciation files, instead of playing the files (using the command 'open')")
 var fallback = flag.String("fallback", "", "if no pronuncations are found, fallback to using the 'say' command with this `voice`")
 var nossl = flag.Bool("nossl", false, "don't use ssl when communicating with forvo.com; about twice as fast, but exposes your api key in plaintext")
@@ -34,60 +37,45 @@ var bench = flag.Bool("bench", false, "time the request to forvo.com")
 
 var canto = flag.Bool("canto", false, "also search cantonese.org for definitions")
 var yi = flag.Bool("yi", false, "also search yandex for images")
-var gi = flag.String("gi", "", "also search google.GI for images")
+var gi = flag.String("gi", "", "also search google.`GI` for images")
 var dict = flag.Bool("dict", false, "also open dict:// (the builtin mac dictionary) for definitions")
 
 var yt = flag.String("yt", "", "yandex translate sentences from language LA to language LB (`LA-LB`)")
-var gt = flag.String("gt", "", "google sentences sentences from language LA to language LB (`LA-LB`)")
+var gt = flag.Bool("gt", false, "google translate sentences (must pick language using UI)")
 
-func lookupWebCanto(word string) {
-	cmd := exec.Command("open", "https://cantonese.org/search.php?q="+url.QueryEscape(word))
-	// fmt.Println("command:", cmd)
+var chrome = flag.String("chrome", "", "comma-separated list of flags that should use chrome browser (instead of system default)")
+
+func openUrl(flag, url string) {
+	var cmd *exec.Cmd
+	if strings.Contains(*chrome, ","+flag+",") {
+		cmd = exec.Command("open", "-a", "Google Chrome", url)
+	} else {
+		cmd = exec.Command("open", url)
+	}
 	err := cmd.Run()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "error opening safari:", err)
+		fmt.Fprint(os.Stderr, "error opening browser for -", flag, ": ", err, "\n")
 	}
+}
+
+func lookupWebCanto(word string) {
+	openUrl("canto", "https://cantonese.org/search.php?q="+url.QueryEscape(word))
 }
 
 func lookupWebYandexImages(word string) {
-	cmd := exec.Command("open", "https://yandex.ru/images/search?text="+url.QueryEscape(word))
-	// fmt.Println("command:", cmd)
-	err := cmd.Run()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "error opening url:", err)
-	}
+	openUrl("yi", "https://yandex.ru/images/search?text="+url.QueryEscape(word))
 }
 
 func lookupWebYandexTrans(lang, s string) {
-	cmd := exec.Command("open", "https://translate.yandex.ru/?lang="+lang+"&text="+url.QueryEscape(s))
-	// fmt.Println("command:", cmd)
-	err := cmd.Run()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "error opening url:", err)
-	}
+	openUrl("yt", "https://translate.yandex.ru/?lang="+lang+"&text="+url.QueryEscape(s))
 }
 
-// lang format `SOURCE-DEST`
-func lookupWebGoogleTrans(lang, s string) {
-	sl_tl := strings.Split(lang, "-")
-	sl := url.QueryEscape(sl_tl[0])
-	tl := url.QueryEscape(sl_tl[1])
-	s = url.QueryEscape(s)
-	cmd := exec.Command("open", fmt.Sprint("https://translate.google.com/?sl=", sl, "&tl=", tl, "&text=", s, "&op=trranslate"))
-	// fmt.Println("command:", cmd)
-	err := cmd.Run()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "error opening url:", err)
-	}
+func lookupWebGoogleTrans(s string) {
+	openUrl("gt", fmt.Sprint("https://translate.google.com/?text=", url.QueryEscape(s), "&op=trranslate"))
 }
 
 func lookupWebGoogleImages(country string, word string) {
-	cmd := exec.Command("open", "https://www.google."+country+"/search?tbm=isch&q="+url.QueryEscape(word))
-	// fmt.Println("command:", cmd)
-	err := cmd.Run()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "error opening url:", err)
-	}
+	openUrl("gi", "https://www.google."+country+"/search?tbm=isch&q="+url.QueryEscape(word))
 }
 
 func lookupDict(word string) {
@@ -128,8 +116,8 @@ func lookupSentence(s string) error {
 	if *yt != "" {
 		lookupWebYandexTrans(*yt, s)
 	}
-	if *gt != "" {
-		lookupWebGoogleTrans(*gt, s)
+	if *gt {
+		lookupWebGoogleTrans(s)
 	}
 	return nil
 }
@@ -346,6 +334,7 @@ options:
 		flag.PrintDefaults()
 	}
 	flag.Parse()
+	*chrome = "," + *chrome + ","
 	if len(flag.Args()) > 0 {
 		fatal("unknown argument:", flag.Args()[0])
 	}
