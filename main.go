@@ -1,4 +1,4 @@
-// Command forvosay downloads and plays pronunciations from Forvo.com (using mplayer).
+// Command forvosay downloads and plays pronunciations from Forvo.com (using afplay).
 //
 // Results are cached in ~/.forvocache.
 package main
@@ -327,7 +327,7 @@ Results are cached in ~/.forvocache.
 dependencies:
 
 - FORVO_API_KEY must be set in your environment
-- mplayer must be in your PATH
+- afplay must be in your PATH (in /usr/bin on macs)
 
 options:
 `)
