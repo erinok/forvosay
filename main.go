@@ -38,6 +38,8 @@ var bench = flag.Bool("bench", false, "time the request to forvo.com")
 var canto = flag.Bool("canto", false, "also search cantonese.org for definitions")
 var yi = flag.Bool("yi", false, "also search yandex for images")
 var gi = flag.String("gi", "", "also search google.`GI` for images")
+var bi = flag.Bool("bi", false, "also search baidu for images")
+
 var dict = flag.Bool("dict", false, "also open dict:// (the builtin mac dictionary) for definitions")
 
 var yt = flag.String("yt", "", "yandex translate sentences from language LA to language LB (`LA-LB`)")
@@ -76,6 +78,11 @@ func lookupWebGoogleTrans(s string) {
 
 func lookupWebGoogleImages(country string, word string) {
 	openUrl("gi", "https://www.google."+country+"/search?tbm=isch&q="+url.QueryEscape(word))
+}
+
+func lookupWebBaiduImages(word string) {
+	url := "https://image.baidu.com/search/index?tn=baiduimage&ie=utf-8&word=" + url.QueryEscape(word)
+	openUrl("bi", url)
 }
 
 func lookupDict(word string) {
@@ -138,6 +145,9 @@ func lookupFancy(word string, repeat bool, onlyForvo bool, getPlayCount func(str
 		}
 		if *gi != "" {
 			lookupWebGoogleImages(*gi, word)
+		}
+		if *bi {
+			lookupWebBaiduImages(word)
 		}
 	}
 	req := Req{word, *lang}
