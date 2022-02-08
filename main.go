@@ -34,12 +34,12 @@ var fallback = flag.String("fallback", "", "if no pronuncations are found, fallb
 var nossl = flag.Bool("nossl", false, "don't use ssl when communicating with forvo.com; about twice as fast, but exposes your api key in plaintext")
 var bench = flag.Bool("bench", false, "time the request to forvo.com")
 
-var canto = flag.Bool("canto", false, "also search cantonese.org for definitions")
-var yi = flag.Bool("yi", false, "also search yandex for images")
-var gi = flag.String("gi", "", "also search google.`GI` for images")
-var bi = flag.Bool("bi", false, "also search baidu for images")
+var canto = flag.Bool("canto", false, "search cantonese.org for definitions")
+var yi = flag.Bool("yi", false, "search yandex for images")
+var gi = flag.String("gi", "", "search google.`GI` for images")
+var bi = flag.Bool("bi", false, "search baidu for images")
 
-var dict = flag.Bool("dict", false, "also open dict:// (the builtin mac dictionary) for definitions")
+var dict = flag.Bool("dict", false, "open dict:// (the builtin mac dictionary) for definitions")
 
 var yt = flag.String("yt", "", "yandex translate sentences from language LA to language LB (`LA-LB`)")
 var gt = flag.Bool("gt", false, "google translate sentences (must pick language using UI)")
@@ -344,6 +344,9 @@ options:
 		flag.PrintDefaults()
 	}
 	flag.Parse()
+	if *yt != "" && (*yt)[0] == '-' {
+		fatal("bad yt argument: ", *yt, " -- expected <LANG>-<LANG>")
+	}
 	*chrome = "," + *chrome + ","
 	if len(flag.Args()) > 0 {
 		fatal("unknown argument:", flag.Args()[0])
