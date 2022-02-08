@@ -21,8 +21,7 @@ import (
 	"github.com/tevino/abool"
 )
 
-var word = flag.String("word", "", "say this `word` or phrase")
-var forever = flag.Bool("forever", false, "say words from the clipboard (run forever)")
+var word = flag.String("word", "", "lookup just this `word` and exit")
 
 var lang = flag.String("lang", "", "2-letter language `code`")
 var refreshCache = flag.Bool("refresh", false, "download results even if already in cache")
@@ -226,7 +225,7 @@ func maybePassword(s string) bool {
 
 func maybeSentence(s string) bool {
 	if *canto {
-		return utf8.RuneCountInString(s) >= 4
+		return utf8.RuneCountInString(s) >= 5
 	}
 	return len(strings.Fields(s)) >= 4
 }
@@ -328,9 +327,10 @@ func lookupForever() {
 
 func main() {
 	flag.Usage = func() {
-		fmt.Fprint(os.Stderr, os.Args[0], ` -lang LANG -word WORD
+		fmt.Fprint(os.Stderr, os.Args[0], ` -lang <lang> [<options>]
 
-Download and play pronunciations for WORD in language LANG from Forvo.com.
+Pronounce words copied to the clipboard; pronunciations are downloaded from
+forvo.com.
 
 Results are cached in ~/.forvocache.
 
@@ -355,16 +355,15 @@ options:
 	if apiKey == "" {
 		fatal("must set FORVO_API_KEY in environment")
 	}
-	if *forever {
-		lookupForever()
+	if *word != "" {
+		err := lookup(*word)
+		if err != nil {
+			fatal(err)
+		}
+		return
 	}
-	if *word == "" {
-		fatal("must pass -word or -forever")
-	}
-	err := lookup(*word)
-	if err != nil {
-		fatal(err)
-	}
+
+	lookupForever()
 }
 
 func fatal(v ...interface{}) {
