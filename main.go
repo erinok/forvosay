@@ -1,6 +1,8 @@
 // Command forvosay downloads and plays pronunciations from Forvo.com (using afplay).
 //
 // Results are cached in ~/.forvocache.
+//
+// BUG: if forvo returns error, we still save corrupted mp3
 package main
 
 import (
@@ -24,10 +26,10 @@ import (
 var word = flag.String("word", "", "say this `word` or phrase")
 var forever = flag.Bool("forever", false, "say words from the clipboard (run forever)")
 
-var lang = flag.String("lang", "", "2-letter language `code`")
+var lang = flag.String("lang", "", "2 or 3 letter language `code`")
 var refreshCache = flag.Bool("refresh", false, "download results even if already in cache")
 
-var numSay = flag.Int("n", 1, "(`max`) number of pronunciations to play; < 0 for all")
+var numSay = flag.Int("n", 1, "`max` number of pronunciations to play; < 0 for all")
 var topSay = flag.Int("top", 5, "draw the N pronunciations to play randomly from the top `T`")
 
 var showFiles = flag.Bool("showFiles", false, "open the folder with the cached pronunciation files, instead of playing the files (using the command 'open')")
@@ -35,12 +37,12 @@ var fallback = flag.String("fallback", "", "if no pronuncations are found, fallb
 var nossl = flag.Bool("nossl", false, "don't use ssl when communicating with forvo.com; about twice as fast, but exposes your api key in plaintext")
 var bench = flag.Bool("bench", false, "time the request to forvo.com")
 
-var canto = flag.Bool("canto", false, "also search cantonese.org for definitions")
-var yi = flag.Bool("yi", false, "also search yandex for images")
-var gi = flag.String("gi", "", "also search google.`GI` for images")
-var bi = flag.Bool("bi", false, "also search baidu for images")
+var canto = flag.Bool("canto", false, "search cantonese.org for definitions")
+var yi = flag.Bool("yi", false, "search yandex for images")
+var gi = flag.String("gi", "", "search google.`GI` for images")
+var bi = flag.Bool("bi", false, "search baidu for images")
 
-var dict = flag.Bool("dict", false, "also open dict:// (the builtin mac dictionary) for definitions")
+var dict = flag.Bool("dict", false, "open dict:// (the builtin mac dictionary) for definitions")
 
 var yt = flag.String("yt", "", "yandex translate sentences from language LA to language LB (`LA-LB`)")
 var gt = flag.Bool("gt", false, "google translate sentences (must pick language using UI)")
@@ -225,10 +227,23 @@ func maybePassword(s string) bool {
 }
 
 func maybeSentence(s string) bool {
+	if *yt == "" && !*gt {
+		return false // no translate set so always assume not sentence
+	}
 	if *canto {
 		return utf8.RuneCountInString(s) >= 4
 	}
 	return len(strings.Fields(s)) >= 4
+}
+
+func shouldSkip(s string) bool {
+	if utf8.RuneCountInString(s) > 1000 {
+		return true
+	}
+	if maybePassword(s) {
+		return true
+	}
+	return false
 }
 
 func trackPlayCounts() (get func(string) int, incr func(string)) {
@@ -303,8 +318,8 @@ func lookupForever() {
 			// skip whatever's initially on the clipboard (somehow it's annoying to pick this up)
 			continue
 		}
-		if maybePassword(s) {
-			fmt.Printf("skipping word containing too much punctuation (in case it's a password)")
+		if shouldSkip(s) {
+			fmt.Printf("skipping word that looks like a password or very long body of text")
 			continue
 		}
 		if i > 1 && !r {
@@ -328,7 +343,7 @@ func lookupForever() {
 
 func main() {
 	flag.Usage = func() {
-		fmt.Fprint(os.Stderr, os.Args[0], ` -lang LANG -word WORD
+		fmt.Fprint(os.Stderr, os.Args[0], ` [options]
 
 Download and play pronunciations for WORD in language LANG from Forvo.com.
 
