@@ -1,6 +1,8 @@
 // Command forvosay downloads and plays pronunciations from Forvo.com (using afplay).
 //
 // Results are cached in ~/.forvocache.
+//
+// BUG: if forvo returns error, we still save corrupted mp3
 package main
 
 import (
@@ -23,10 +25,10 @@ import (
 
 var word = flag.String("word", "", "lookup just this `word` and exit")
 
-var lang = flag.String("lang", "", "2-letter language `code`")
+var lang = flag.String("lang", "", "2 or 3 letter language `code`")
 var refreshCache = flag.Bool("refresh", false, "download results even if already in cache")
 
-var numSay = flag.Int("n", 1, "(`max`) number of pronunciations to play; < 0 for all")
+var numSay = flag.Int("n", 1, "`max` number of pronunciations to play; < 0 for all")
 var topSay = flag.Int("top", 5, "draw the N pronunciations to play randomly from the top `T`")
 
 var showFiles = flag.Bool("showFiles", false, "open the folder with the cached pronunciation files, instead of playing the files (using the command 'open')")
@@ -224,10 +226,23 @@ func maybePassword(s string) bool {
 }
 
 func maybeSentence(s string) bool {
+	if *yt == "" && !*gt {
+		return false // no translate set so always assume not sentence
+	}
 	if *canto {
 		return utf8.RuneCountInString(s) >= 5
 	}
 	return len(strings.Fields(s)) >= 4
+}
+
+func shouldSkip(s string) bool {
+	if utf8.RuneCountInString(s) > 1000 {
+		return true
+	}
+	if maybePassword(s) {
+		return true
+	}
+	return false
 }
 
 func trackPlayCounts() (get func(string) int, incr func(string)) {
@@ -302,8 +317,8 @@ func lookupForever() {
 			// skip whatever's initially on the clipboard (somehow it's annoying to pick this up)
 			continue
 		}
-		if maybePassword(s) {
-			fmt.Printf("skipping word containing too much punctuation (in case it's a password)")
+		if shouldSkip(s) {
+			fmt.Printf("skipping word that looks like a password or very long body of text")
 			continue
 		}
 		if i > 1 && !r {
