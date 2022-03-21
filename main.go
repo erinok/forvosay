@@ -287,7 +287,7 @@ func lookupForever() {
 	}()
 	for i := 0; ; i++ {
 		if i > 0 {
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(10 * time.Millisecond)
 		}
 		s, err := clipboard.ReadAll()
 		s = strings.TrimSpace(s)
