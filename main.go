@@ -318,7 +318,7 @@ func lookupForever() {
 			continue
 		}
 		if shouldSkip(s) {
-			fmt.Printf("skipping word that looks like a password or very long body of text")
+			fmt.Println("skipping word that looks like a password or very long body of text")
 			continue
 		}
 		if i > 1 && !r {
