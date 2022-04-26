@@ -201,10 +201,18 @@ func lookupFancy(word string, repeat bool, onlyForvo bool, getPlayCount func(str
 				incrPlayCount(mp3.Fname)
 				err := PlayMP3(mp3.Fname)
 				if err != nil {
-					errs = append(errs, fmt.Errorf("could not play mp3: %v", err))
+					errs = append(errs, fmt.Errorf("could not play mp3: %v (will delete file)", err))
+					os.Remove(mp3.Fname)
+					numSaid--
 				}
 			}
 		})
+		if numSaid == 0 && *fallback != "" && !onlyForvo {
+			fmt.Println("no results; using 'say'")
+			if err := exec.Command("say", "-v", *fallback, word).Run(); err != nil {
+				return fmt.Errorf("could not 'say': %v", err)
+			}
+		}
 		if len(errs) > 0 {
 			return errs[0]
 		}
