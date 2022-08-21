@@ -52,9 +52,13 @@ func (req Req) CacheMP3Fname(index int) string {
 }
 
 func Get(req Req) (*Resp, error) {
+	var fullAddr string
 	if *bench {
 		t0 := time.Now()
-		defer func() { fmt.Println(time.Since(t0)) }()
+		defer func() {
+			fmt.Println(fullAddr)
+			fmt.Println(time.Since(t0))
+		}()
 	}
 	if req.Word == "0" {
 		req.Word = " 0" // workaround apparent forvo bug
@@ -63,7 +67,7 @@ func Get(req Req) (*Resp, error) {
 	if *nossl {
 		addr = "http://apifree.forvo.com"
 	}
-	url := fmt.Sprint(
+	fullAddr = fmt.Sprint(
 		addr,
 		"/key/", apiKey,
 		"/format/json",
@@ -73,7 +77,7 @@ func Get(req Req) (*Resp, error) {
 		"/order/rate-desc",
 	)
 	fmt.Println("downloading pronunciation list...")
-	resp, err := http.Get(url)
+	resp, err := http.Get(fullAddr)
 	if err != nil {
 		return nil, err
 	}
